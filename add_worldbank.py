@@ -1,23 +1,24 @@
 """
 add_worldbank.py
-Scarica indicatori socio-economici dalla Banca Mondiale e li unisce al panel DESI.
+Downloads socio-economic indicators from the World Bank and merges them into the DESI panel.
 
-Input : data/processed/desi_panel.csv   (prodotto da build_dataset.py)
-Output: data/raw/worldbank_raw.csv      (dati scaricati, in formato lungo)
-        data/processed/panel_full.csv   (panel DESI + variabili Banca Mondiale)
+Input : data/processed/desi_panel.csv   (produced by build_dataset.py)
+Output: data/raw/worldbank_raw.csv      (downloaded data, long format)
+        data/processed/panel_full.csv   (DESI panel + World Bank variables)
 
-Uso:  python add_worldbank.py
-Serve una connessione internet (API della Banca Mondiale).
+Usage:  python add_worldbank.py
+Requires an internet connection (World Bank API).
 """
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 PANEL_IN = Path("data/processed/desi_panel.csv")
 WB_RAW = Path("data/raw/worldbank_raw.csv")
 PANEL_OUT = Path("data/processed/panel_full.csv")
 
-# Codice DESI/Eurostat (ISO2, ma Grecia = EL) -> codice ISO3 usato dalla Banca Mondiale
+# DESI/Eurostat country code (ISO2, but Greece = EL) -> ISO3 code used by the World Bank
 ISO2_TO_ISO3 = {
     "AT": "AUT", "BE": "BEL", "BG": "BGR", "CY": "CYP", "CZ": "CZE", "DE": "DEU",
     "DK": "DNK", "EE": "EST", "EL": "GRC", "ES": "ESP", "FI": "FIN", "FR": "FRA",
@@ -26,30 +27,30 @@ ISO2_TO_ISO3 = {
     "SE": "SWE", "SI": "SVN", "SK": "SVK",
 }
 
-# nome_leggibile -> codice indicatore Banca Mondiale
+# readable name -> World Bank indicator code
 WB_INDICATORS = {
-    "gdp_pc_ppp":      "NY.GDP.PCAP.PP.KD",   # PIL pro capite, PPA, prezzi costanti
-    "tertiary_enrol":  "SE.TER.ENRR",         # iscrizione all'istruzione terziaria (% lordo)
-    "rnd_gdp":         "GB.XPD.RSDV.GD.ZS",   # spesa in R&S (% del PIL)
-    "urban_pop":       "SP.URB.TOTL.IN.ZS",   # popolazione urbana (%)
-    "services_gdp":    "NV.SRV.TOTL.ZS",      # servizi (% del PIL)
-    "population":      "SP.POP.TOTL",         # popolazione totale
+    "gdp_pc_ppp":      "NY.GDP.PCAP.PP.KD",   # GDP per capita, PPP, constant prices
+    "tertiary_enrol":  "SE.TER.ENRR",         # tertiary education enrolment (% gross)
+    "rnd_gdp":         "GB.XPD.RSDV.GD.ZS",   # R&D expenditure (% of GDP)
+    "urban_pop":       "SP.URB.TOTL.IN.ZS",   # urban population (%)
+    "services_gdp":    "NV.SRV.TOTL.ZS",      # services, value added (% of GDP)
+    "population":      "SP.POP.TOTL",         # total population
 }
 
-# Le statistiche della Banca Mondiale escono con ritardo: per ogni anno Y del panel
-# usiamo il valore dell'anno Y-1 (cosi' i predittori precedono l'esito) e, se manca,
-# l'ultimo valore disponibile fino a 2 anni prima.
+# World Bank statistics are published with a delay: for each panel year Y we use
+# the value of year Y-1 (so predictors precede the outcome) and, if it is missing,
+# the last available value up to 2 years earlier.
 LAG = 1
 FFILL_LIMIT = 2
 
 
 def download_worldbank(years: range) -> pd.DataFrame:
-    import wbgapi as wb  # installato con: pip install wbgapi
+    import wbgapi as wb  # installed with: pip install wbgapi
 
     economies = list(ISO2_TO_ISO3.values())
     frames = []
     for name, code in WB_INDICATORS.items():
-        print(f"Scarico {name} ({code})...")
+        print(f"Downloading {name} ({code})...")
         wide = wb.data.DataFrame(code, economy=economies, time=years, numericTimeKeys=True)
         wide.index.name = "iso3"
         long = wide.reset_index().melt(id_vars="iso3", var_name="year", value_name="value")
@@ -63,7 +64,7 @@ def download_worldbank(years: range) -> pd.DataFrame:
 def merge_panel(panel: pd.DataFrame, wb_long: pd.DataFrame) -> pd.DataFrame:
     wb_wide = wb_long.pivot_table(index=["iso3", "year"], columns="indicator", values="value")
     wb_wide = wb_wide.sort_index()
-    # riempie i buchi con l'ultimo valore noto (massimo FFILL_LIMIT anni) dentro ogni paese
+    # fill gaps with the last known value (at most FFILL_LIMIT years) within each country
     wb_wide = wb_wide.groupby(level="iso3").ffill(limit=FFILL_LIMIT).reset_index()
 
     df = panel.copy()
@@ -72,8 +73,7 @@ def merge_panel(panel: pd.DataFrame, wb_long: pd.DataFrame) -> pd.DataFrame:
     df = df.merge(wb_wide, left_on=["iso3", "wb_year"], right_on=["iso3", "year"],
                   how="left", suffixes=("", "_wb"))
     df = df.drop(columns=["year_wb", "wb_year"])
-    # PIL e popolazione hanno scale molto diverse: usiamo il logaritmo (spesso utile nei modelli)
-    import numpy as np
+    # GDP and population are on very different scales: use logs (often useful in models)
     df["log_gdp_pc_ppp"] = np.log(df["gdp_pc_ppp"])
     df["log_population"] = np.log(df["population"])
     return df
@@ -88,12 +88,12 @@ def main() -> None:
     wb_long.to_csv(WB_RAW, index=False)
 
     full = merge_panel(panel, wb_long)
-    print("\nForma del panel completo:", full.shape)
-    print("Valori mancanti nelle variabili Banca Mondiale:")
+    print("\nFull panel shape:", full.shape)
+    print("Missing values in World Bank variables:")
     print(full[list(WB_INDICATORS)].isna().sum().to_string())
 
     full.to_csv(PANEL_OUT, index=False)
-    print("Salvato in", PANEL_OUT)
+    print("Saved to", PANEL_OUT)
 
 
 if __name__ == "__main__":
