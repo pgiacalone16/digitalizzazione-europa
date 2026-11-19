@@ -1,7 +1,7 @@
 # Digital Maturity in Europe: What Explains Differences Between EU Countries?
 
 > **Project status**: in progress. Data preparation ✅ · Exploratory analysis ✅ ·
-> Models ⬜ · Clustering ⬜
+> Target and features ✅ · Models ⬜ · Clustering ⬜
 
 ## Research question
 Which structural factors (education, income, infrastructure, skills,
@@ -48,9 +48,14 @@ The analysis has four stages.
   digital intensity, and enterprises using cloud, AI and ERP. Big data and
   e-commerce are excluded because they are not available for all years and
   countries.
-- **Explanatory variables**: digital skills of the population, infrastructure
-  coverage (very high capacity networks, 5G), GDP per capita, tertiary
-  education, R&D spending as a % of GDP, urbanisation.
+  The target was checked for internal consistency: its four components
+  correlate positively (0.43 to 0.89) and the first principal component
+  explains about 73% of their variance.
+- **Explanatory variables**: digital skills (basic and above-basic) and ICT
+  specialists, infrastructure coverage (fibre, very high capacity networks,
+  5G), log GDP per capita, tertiary enrolment, R&D spending and urbanisation.
+  Unicorns and the public-services indicators are left out (they are outcomes
+  of digitalisation) and may be added later as a robustness check.
 - To avoid circularity, the DESI business indicators used in the target are not
   included among the explanatory variables.
 
@@ -111,6 +116,16 @@ digital skills tend to have more digitalised businesses (Pearson 0.75,
 Spearman 0.66). These are associations across countries and years, not
 causal effects.*
 
+#### Business digitalisation index
+![Distribution of the target and by year](outputs/figures/07_target_distribution.png)
+
+*The index shows a common upward trend across all countries, but not a
+convergence: dispersion is about twice as large in 2025 as in 2021, so the
+gap between leaders and laggards has widened. Models will therefore need to
+cope with a year effect and a growing spread, and the pooled histogram's
+second bump may partly reflect the different years rather than distinct
+country groups.*
+
 ### Model performance
 | Model | R² (country-grouped CV) | RMSE | MAE |
 |---|---|---|---|
@@ -158,6 +173,11 @@ causal effects.*
 - **Clustering**: clusters depend on the algorithm, the scaling of the
   variables and the chosen number of groups; they should be considered a
   descriptive summary, not a "true" classification.
+- **Common time trend**: the target is standardised across all years, so it
+  rises for all countries between 2021 and 2025; a year effect is therefore
+  mixed into the relationships and may need to be controlled for.
+- **Highly collinear predictors**: [add one line with your VIF result, e.g.
+  "basic and above-basic skills are nearly redundant (VIF X)"].
 
 ## How to run the project
 
@@ -168,7 +188,8 @@ causal effects.*
 │   ├── raw/                # CSV files downloaded from DESI (unmodified)
 │   └── processed/          # datasets produced by the scripts
 ├── notebooks/
-│   └── 01_eda.ipynb        # exploratory data analysis
+│   ├── 01_eda.ipynb        # exploratory data analysis
+│   └── 02_models.ipynb     # target, features and CV groups (data preparation for models)
 ├── outputs/
 │   └── figures/            # charts saved by the notebooks
 ├── build_dataset.py        # builds the DESI country-year panel
@@ -176,8 +197,8 @@ causal effects.*
 ├── requirements.txt
 └── README.md
 ```
-Planned notebooks: `02_models.ipynb` (target, models and validation) and
-`03_clustering.ipynb`.
+Planned notebooks: `03_models_baseline.ipynb` (baseline, regularised models,
+Random Forest and validation) and `04_clustering.ipynb`.
 
 ### Requirements
 - Python 3.10+
