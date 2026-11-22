@@ -1,0 +1,5 @@
+model,cv,R2,RMSE,MAE
+Baseline A: training mean,GroupKFold(5),-0.1577,0.9099,0.7255
+Baseline B: mean by year,GroupKFold(5),0.0375,0.8297,0.6443
+Baseline A: training mean,Leave-one-country-out,-0.0604,0.8709,0.6946
+Baseline B: mean by year,Leave-one-country-out,0.1347,0.7867,0.5983

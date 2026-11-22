@@ -1,7 +1,7 @@
 # Digital Maturity in Europe: What Explains Differences Between EU Countries?
 
 > **Project status**: in progress. Data preparation ✅ · Exploratory analysis ✅ ·
-> Target and features ✅ · Models ⬜ · Clustering ⬜
+> Target and features ✅ · Baselines ✅ · Models ⬜ · Clustering ⬜
 
 ## Research question
 Which structural factors (education, income, infrastructure, skills,
@@ -60,14 +60,18 @@ The analysis has four stages.
   included among the explanatory variables.
 
 ### 3. Supervised models (factors associated with digitalisation)
-- **Baseline**: regularised linear regression (Ridge, Lasso, Elastic Net),
+- **Benchmarks**: two naive models evaluated with the same country-grouped
+  cross-validation: the training mean of the target, and the mean of each year
+  (which captures only the common time trend). Regularised models must beat
+  the second one to be considered useful.
+- **Linear models**: regularised regression (Ridge, Lasso, Elastic Net),
   interpretable and suited to small samples.
 - **Non-linear models**: Random Forest and Gradient Boosting, to capture
   interactions and non-linearities.
 - **Validation**: grouped cross-validation by country
   (`GroupKFold` / leave-one-country-out), because the three observations of
-  the same country are not independent. Metrics: R², RMSE, MAE, compared
-  with a naive model (the mean of the target).
+  the same country are not independent. Metrics: R², RMSE, MAE, compared 
+  with the naive benchmarks above.
 - **Interpretation**: coefficients (linear models), permutation importance
   and SHAP values (tree-based models), with importance stability assessed
   across folds.
@@ -126,10 +130,19 @@ cope with a year effect and a growing spread, and the pooled histogram's
 second bump may partly reflect the different years rather than distinct
 country groups.*
 
+### Baselines
+
+![Baselines under country-grouped cross-validation](outputs/figures/09_baseline_predictions.png)
+
+*Out-of-fold predictions versus actual values. The training mean (left) has
+R² = −0.16; the mean by year (right) separates the years but not the countries
+(R² = 0.04). These are the benchmarks the real models must beat.*
+
 ### Model performance
 | Model | R² (country-grouped CV) | RMSE | MAE |
 |---|---|---|---|
-| Baseline (mean) | – | – | – |
+| Baseline A: training mean | −0.16 | 0.91 | 0.73 |
+| Baseline B: mean by year | 0.04 | 0.83 | 0.64 |
 | Ridge / Lasso / Elastic Net | – | – | – |
 | Random Forest | – | – | – |
 | Gradient Boosting | – | – | – |
@@ -188,10 +201,12 @@ country groups.*
 │   ├── raw/                # CSV files downloaded from DESI (unmodified)
 │   └── processed/          # datasets produced by the scripts
 ├── notebooks/
-│   ├── 01_eda.ipynb        # exploratory data analysis
-│   └── 02_models.ipynb     # target, features and CV groups (data preparation for models)
+│   ├── 01_eda.ipynb                 # exploratory data analysis
+│   ├── 02_models.ipynb              # target, features, validation setup
+│   └── 03_models_baseline.ipynb     # baselines and metrics
 ├── outputs/
-│   └── figures/            # charts saved by the notebooks
+│   ├── figures/                     # charts saved by the notebooks
+│   └── tables/                      # result tables (CSV)
 ├── build_dataset.py        # builds the DESI country-year panel
 ├── add_worldbank.py        # downloads World Bank data and merges it into the panel
 ├── requirements.txt
