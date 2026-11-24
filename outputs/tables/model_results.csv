@@ -1,0 +1,9 @@
+model,inputs,R2,RMSE,MAE
+Baseline A: training mean,none,-0.1577,0.9099,0.7255
+Baseline B: mean by year,year only,0.0375,0.8297,0.6443
+Ridge (nested CV),features only,0.6552,0.4966,0.4042
+Lasso (nested CV),features only,0.5805,0.5477,0.4397
+Elastic Net (nested CV),features only,0.6305,0.5141,0.418
+Ridge (nested CV),features + year,0.6874,0.4729,0.3821
+Lasso (nested CV),features + year,0.6258,0.5173,0.4127
+Elastic Net (nested CV),features + year,0.6483,0.5016,0.3997

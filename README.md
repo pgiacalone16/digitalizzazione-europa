@@ -1,7 +1,7 @@
 # Digital Maturity in Europe: What Explains Differences Between EU Countries?
 
 > **Project status**: in progress. Data preparation ✅ · Exploratory analysis ✅ ·
-> Target and features ✅ · Baselines ✅ · Models ⬜ · Clustering ⬜
+> Target and features ✅ · Baselines ✅ · Linear models ✅ · Non-linear models ⬜ · Clustering ⬜
 
 ## Research question
 Which structural factors (education, income, infrastructure, skills,
@@ -65,7 +65,9 @@ The analysis has four stages.
   (which captures only the common time trend). Regularised models must beat
   the second one to be considered useful.
 - **Linear models**: regularised regression (Ridge, Lasso, Elastic Net),
-  interpretable and suited to small samples.
+  interpretable and suited to small samples. Hyperparameters are chosen by
+  nested cross-validation (inner loop grouped by country), and preprocessing
+  is fitted inside each fold.
 - **Non-linear models**: Random Forest and Gradient Boosting, to capture
   interactions and non-linearities.
 - **Validation**: grouped cross-validation by country
@@ -138,18 +140,38 @@ country groups.*
 R² = −0.16; the mean by year (right) separates the years but not the countries
 (R² = 0.04). These are the benchmarks the real models must beat.*
 
+### Regularised linear models
+
+![Regularised linear models, nested country-grouped CV](outputs/figures/11_linear_predictions.png)
+
+*Out-of-fold predictions versus actual values. Points follow the diagonal and
+spread across countries, not only across years, unlike the baselines. The
+highest values (2025) are underestimated, as expected from regularised models.*
+
+![Coefficient stability across folds](outputs/figures/10_linear_coefficients.png)
+
+*Standardised coefficients (mean ± sd across the 5 outer folds).
+`skills_above`, `year` and `rnd_gdp` are consistently positive; `skills_basic`
+is shrunk by Lasso and Elastic Net, probably because it overlaps with
+`skills_above`. These are associations, not causal effects.*
+
 ### Model performance
 | Model | R² (country-grouped CV) | RMSE | MAE |
 |---|---|---|---|
 | Baseline A: training mean | −0.16 | 0.91 | 0.73 |
 | Baseline B: mean by year | 0.04 | 0.83 | 0.64 |
-| Ridge / Lasso / Elastic Net | – | – | – |
+| Ridge | 0.69 | 0.47 | 0.38 |
+| Lasso | 0.63 | 0.52 | 0.41 |
+| Elastic Net | 0.65 | 0.50 | 0.40 |
 | Random Forest | – | – | – |
 | Gradient Boosting | – | – | – |
 
+*Pooled out-of-fold metrics, GroupKFold(5), hyperparameters chosen by nested CV; linear models use the structural variables plus the year. Without the year: Ridge R² = 0.66, Lasso 0.58, Elastic Net 0.63.*
+
 ### Factors most associated with digitalisation
-- Ranking of variables by importance (permutation importance / SHAP):
-  *to be added*.
+- Preliminary evidence from the linear models: digital skills (above-basic),
+  R&D spending and the time trend carry the largest and most stable
+  coefficients. Importance from tree-based models: *to be added*..
 - Direction and shape of the associations (partial dependence plots):
   *to be added*.
 
@@ -191,6 +213,9 @@ R² = −0.16; the mean by year (right) separates the years but not the countrie
   mixed into the relationships and may need to be controlled for.
 - **Highly collinear predictors**: [add one line with your VIF result, e.g.
   "basic and above-basic skills are nearly redundant (VIF X)"].
+  - **Model comparison**: with 27 countries, differences of a few hundredths in
+  R² between linear models are within noise; coefficient signs and sizes vary
+  across folds, especially for correlated variables.
 
 ## How to run the project
 
@@ -204,6 +229,7 @@ R² = −0.16; the mean by year (right) separates the years but not the countrie
 │   ├── 01_eda.ipynb                 # exploratory data analysis
 │   ├── 02_models.ipynb              # target, features, validation setup
 │   └── 03_models_baseline.ipynb     # baselines and metrics
+│   └── 04_models_linear.ipynb
 ├── outputs/
 │   ├── figures/                     # charts saved by the notebooks
 │   └── tables/                      # result tables (CSV)
